@@ -1,0 +1,7 @@
+{
+  "name": "2311-1",
+  "description": "A real-time Mandarin Chinese conversation partner powered by Gemini Live API, featuring a 3D animated avatar and instant subtitles in Hanzi, Pinyin, and English.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
