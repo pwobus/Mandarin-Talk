@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Sphere, Cylinder, OrbitControls, Environment } from '@react-three/drei';
+import { Sphere, Cylinder, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Avatar3DProps {
@@ -86,7 +86,7 @@ const Hair = () => {
             {/* Main Hair Cap */}
             <Sphere args={[1.02, 32, 32]} position={[0, 0.1, -0.05]} material={hairMaterial} />
             
-            {/* Bangs / Front Hair Details (Using Cylinder instead of Capsule for compatibility) */}
+            {/* Bangs / Front Hair Details */}
             <group position={[0, 0.8, 0.85]} rotation={[0.2, 0, 0]}>
                 {/* Center Bang */}
                 <mesh material={hairMaterial} rotation={[0, 0, -0.2]} position={[-0.2, 0, 0]}>
@@ -219,16 +219,25 @@ const CartoonHead = ({ volume }: { volume: number }) => {
 const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
   return (
     <div className="w-full h-full">
-      <Canvas camera={{ position: [0, 0, 4], fov: 50 }} dpr={[1, 2]}>
+      {/* 
+        Changes for Linux Chromium Black Screen Fix:
+        1. Removed <Environment /> preset which requires external network loads that can fail/block rendering.
+        2. Set dpr={1} to prevent scaling issues on some Linux display servers.
+        3. Added fallback ambient lights to ensure visibility without Environment.
+        4. gl={{ alpha: false }} for more stable context.
+      */}
+      <Canvas 
+        camera={{ position: [0, 0, 4], fov: 50 }} 
+        dpr={1} 
+        gl={{ alpha: false, antialias: true }}
+      >
         <color attach="background" args={['#252525']} />
         
-        {/* Simple Studio Lighting */}
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 5, 5]} intensity={1.2} />
-        <directionalLight position={[-5, 5, 2]} intensity={0.5} />
-        <spotLight position={[0, 5, 2]} angle={0.5} penumbra={1} intensity={0.8} />
-
-        <Environment preset="city" />
+        {/* Stronger Standard Lights to replace Environment */}
+        <ambientLight intensity={1.5} />
+        <directionalLight position={[5, 5, 5]} intensity={1.5} />
+        <directionalLight position={[-5, 5, 2]} intensity={0.8} />
+        <spotLight position={[0, 5, 2]} angle={0.5} penumbra={1} intensity={1.0} />
 
         {/* Position moved up to y=0.8 to give clear space for subtitles at the bottom */}
         <group position={[0, 0.8, 0]}>
