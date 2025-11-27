@@ -105,9 +105,8 @@ const App: React.FC = () => {
   };
 
   return (
-    // fixed top-0 left-0 w-full h-screen h-[100svh] ensures the app fits within the Small Viewport Height
-    // h-screen added as fallback
-    <div className="fixed top-0 left-0 w-full h-screen h-[100svh] bg-gradient-to-b from-gray-900 to-gray-800 text-white overflow-hidden font-sans flex flex-col">
+    // fixed top-0 left-0 w-full min-h-screen h-[100svh] ensures the app fits within the Small Viewport Height
+    <div className="fixed top-0 left-0 w-full min-h-screen h-screen h-[100svh] bg-gradient-to-b from-gray-900 to-gray-800 text-white overflow-hidden font-sans flex flex-col">
       
       {/* 3D Background / Avatar Layer */}
       <div className="absolute inset-0 z-0 pointer-events-none">

@@ -86,26 +86,26 @@ const Hair = () => {
             {/* Main Hair Cap */}
             <Sphere args={[1.02, 32, 32]} position={[0, 0.1, -0.05]} material={hairMaterial} />
             
-            {/* Bangs / Front Hair Details */}
+            {/* Bangs / Front Hair Details (Using Cylinder instead of Capsule for compatibility) */}
             <group position={[0, 0.8, 0.85]} rotation={[0.2, 0, 0]}>
                 {/* Center Bang */}
                 <mesh material={hairMaterial} rotation={[0, 0, -0.2]} position={[-0.2, 0, 0]}>
-                    <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
+                    <cylinderGeometry args={[0.15, 0.15, 0.6, 8]} />
                 </mesh>
                 <mesh material={hairMaterial} rotation={[0, 0, 0.1]} position={[0.1, -0.05, 0]}>
-                    <capsuleGeometry args={[0.18, 0.7, 4, 8]} />
+                    <cylinderGeometry args={[0.18, 0.18, 0.7, 8]} />
                 </mesh>
                 <mesh material={hairMaterial} rotation={[0, 0, 0.4]} position={[0.4, 0.05, 0]}>
-                    <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
+                    <cylinderGeometry args={[0.15, 0.15, 0.6, 8]} />
                 </mesh>
             </group>
             
             {/* Side burns */}
             <mesh material={hairMaterial} position={[-0.9, -0.2, 0.2]} rotation={[0, 0, 0.1]}>
-                <capsuleGeometry args={[0.12, 0.8, 4, 8]} />
+                <cylinderGeometry args={[0.12, 0.12, 0.8, 8]} />
             </mesh>
             <mesh material={hairMaterial} position={[0.9, -0.2, 0.2]} rotation={[0, 0, -0.1]}>
-                <capsuleGeometry args={[0.12, 0.8, 4, 8]} />
+                <cylinderGeometry args={[0.12, 0.12, 0.8, 8]} />
             </mesh>
             
             {/* Back bun / Ponytail (Optional visual balance) */}
@@ -188,9 +188,9 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             {/* Mouth */}
             <group position={[0, -0.35, 0.9]} ref={mouthRef}>
                 {/* Background (Inside mouth) */}
-                <mesh position={[0, 0, -0.01]}>
-                     <capsuleGeometry args={[0.08, 0.3, 4, 8]} />
-                     <meshBasicMaterial color="#3E1C1C" /> {/* Dark brownish red */}
+                <mesh position={[0, 0, -0.02]} rotation={[0, 0, 0]}>
+                     <planeGeometry args={[0.2, 0.1]} />
+                     <meshBasicMaterial color="#3E1C1C" />
                 </mesh>
                 {/* Tongue (Optional detail) */}
                 <mesh position={[0, -0.05, 0.02]} scale={[0.8, 0.5, 0.5]}>
@@ -208,11 +208,8 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             
             {/* Shoulders / Body Hint */}
             <group position={[0, -1.6, 0]}>
-                 <mesh material={shirtMaterial}>
-                     <capsuleGeometry args={[0.6, 2.2, 4, 16]} /> {/* Horizontal capsule */}
-                 </mesh>
-                 <mesh rotation={[0,0,Math.PI/2]} material={shirtMaterial}>
-                    <capsuleGeometry args={[0.6, 2.2, 4, 16]} /> 
+                 <mesh material={shirtMaterial} rotation={[0, 0, Math.PI / 2]}>
+                     <cylinderGeometry args={[0.6, 0.6, 2.2, 16]} />
                  </mesh>
             </group>
         </group>
