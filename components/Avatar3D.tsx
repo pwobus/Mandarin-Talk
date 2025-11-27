@@ -223,7 +223,8 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
 
         <Environment preset="city" />
 
-        <group position={[0, 0.3, 0]}>
+        {/* Position moved up to y=0.8 to give clear space for subtitles at the bottom */}
+        <group position={[0, 0.8, 0]}>
              <CartoonHead volume={volume} />
         </group>
 
