@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Sphere, Cylinder, OrbitControls, Environment, Capsule } from '@react-three/drei';
+import { Sphere, Cylinder, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Avatar3DProps {
@@ -89,14 +89,24 @@ const Hair = () => {
             {/* Bangs / Front Hair Details */}
             <group position={[0, 0.8, 0.85]} rotation={[0.2, 0, 0]}>
                 {/* Center Bang */}
-                <Capsule args={[0.15, 0.6, 4, 8]} material={hairMaterial} rotation={[0, 0, -0.2]} position={[-0.2, 0, 0]} />
-                <Capsule args={[0.18, 0.7, 4, 8]} material={hairMaterial} rotation={[0, 0, 0.1]} position={[0.1, -0.05, 0]} />
-                <Capsule args={[0.15, 0.6, 4, 8]} material={hairMaterial} rotation={[0, 0, 0.4]} position={[0.4, 0.05, 0]} />
+                <mesh material={hairMaterial} rotation={[0, 0, -0.2]} position={[-0.2, 0, 0]}>
+                    <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
+                </mesh>
+                <mesh material={hairMaterial} rotation={[0, 0, 0.1]} position={[0.1, -0.05, 0]}>
+                    <capsuleGeometry args={[0.18, 0.7, 4, 8]} />
+                </mesh>
+                <mesh material={hairMaterial} rotation={[0, 0, 0.4]} position={[0.4, 0.05, 0]}>
+                    <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
+                </mesh>
             </group>
             
             {/* Side burns */}
-            <Capsule args={[0.12, 0.8, 4, 8]} material={hairMaterial} position={[-0.9, -0.2, 0.2]} rotation={[0, 0, 0.1]} />
-            <Capsule args={[0.12, 0.8, 4, 8]} material={hairMaterial} position={[0.9, -0.2, 0.2]} rotation={[0, 0, -0.1]} />
+            <mesh material={hairMaterial} position={[-0.9, -0.2, 0.2]} rotation={[0, 0, 0.1]}>
+                <capsuleGeometry args={[0.12, 0.8, 4, 8]} />
+            </mesh>
+            <mesh material={hairMaterial} position={[0.9, -0.2, 0.2]} rotation={[0, 0, -0.1]}>
+                <capsuleGeometry args={[0.12, 0.8, 4, 8]} />
+            </mesh>
             
             {/* Back bun / Ponytail (Optional visual balance) */}
             <Sphere args={[0.4, 32, 32]} position={[0, 0.2, -1]} material={hairMaterial} />
@@ -107,7 +117,7 @@ const Hair = () => {
 const CartoonHead = ({ volume }: { volume: number }) => {
     const mouthRef = useRef<THREE.Group>(null);
     const headGroup = useRef<THREE.Group>(null);
-    const { size, viewport } = useThree();
+    const { size } = useThree();
     const mouse = useRef(new THREE.Vector2());
 
     // Update mouse position normalized (-1 to 1)
@@ -201,7 +211,7 @@ const CartoonHead = ({ volume }: { volume: number }) => {
                  <mesh material={shirtMaterial}>
                      <capsuleGeometry args={[0.6, 2.2, 4, 16]} /> {/* Horizontal capsule */}
                  </mesh>
-                 <mesh rotation={[0,0,Math.PI/2]}>
+                 <mesh rotation={[0,0,Math.PI/2]} material={shirtMaterial}>
                     <capsuleGeometry args={[0.6, 2.2, 4, 16]} /> 
                  </mesh>
             </group>
