@@ -107,7 +107,7 @@ const Hair = () => {
 const CartoonHead = ({ volume }: { volume: number }) => {
     const mouthRef = useRef<THREE.Group>(null);
     const headGroup = useRef<THREE.Group>(null);
-    const { size } = useThree();
+    const { size, viewport } = useThree();
     const mouse = useRef(new THREE.Vector2());
 
     // Update mouse position normalized (-1 to 1)
@@ -209,23 +209,6 @@ const CartoonHead = ({ volume }: { volume: number }) => {
     );
 };
 
-// Wrapper to handle responsive positioning
-const AvatarSceneWrapper: React.FC<{ volume: number }> = ({ volume }) => {
-  const { viewport } = useThree();
-  const isPortrait = viewport.width < viewport.height;
-  
-  // In portrait (mobile), move the avatar up to clear the bottom UI panel.
-  // In landscape (desktop), keep it vertically centered or slightly raised.
-  const position: [number, number, number] = isPortrait ? [0, 1.2, 0] : [0, 0.3, 0];
-  const scale = isPortrait ? 0.9 : 1;
-
-  return (
-    <group position={position} scale={scale}>
-      <CartoonHead volume={volume} />
-    </group>
-  );
-};
-
 const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
   return (
     <div className="w-full h-full">
@@ -240,7 +223,9 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
 
         <Environment preset="city" />
 
-        <AvatarSceneWrapper volume={volume} />
+        <group position={[0, 0.3, 0]}>
+             <CartoonHead volume={volume} />
+        </group>
 
         <OrbitControls 
              enableZoom={false} 

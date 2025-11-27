@@ -58,14 +58,15 @@ export class LiveApiService {
   private isProcessorRunning = false;
   private isConnected = false;
   private isDisconnecting = false; 
-  private hasReportedFatalError = false; // Prevent multiple error popups
+  private hasReportedFatalError = false; 
+  private isReportingError = false; // Semaphore to prevent double error handling
   private currentInputTranscription = '';
 
   // Audio Accumulation Buffer
   private audioBufferChunks: Float32Array[] = [];
   private currentBufferSize = 0;
-  // Increased threshold to ~512ms (8192 samples at 16k) for stability
-  private readonly BUFFER_THRESHOLD = 8192; 
+  // Send chunks every ~256ms (4096 samples at 16k)
+  private readonly BUFFER_THRESHOLD = 4096; 
   
   // Audio Send Queue for Serialization
   private audioSendQueue: Promise<void> = Promise.resolve();
@@ -78,7 +79,23 @@ export class LiveApiService {
   constructor(callbacks: LiveServiceCallbacks) {
     this.callbacks = callbacks;
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Auto-resume audio context when tab becomes visible (fixes mobile "sudden stop" issue)
+    if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
   }
+
+  private handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && this.isConnected) {
+          if (this.inputAudioContext?.state === 'suspended') {
+              try { await this.inputAudioContext.resume(); } catch (e) { console.debug("Resume input failed", e); }
+          }
+          if (this.outputAudioContext?.state === 'suspended') {
+              try { await this.outputAudioContext.resume(); } catch (e) { console.debug("Resume output failed", e); }
+          }
+      }
+  };
 
   async connect(scenarioInstruction?: string, speakingRate: number = 1.0) {
     if (this.session || this.isConnected) return;
@@ -87,6 +104,7 @@ export class LiveApiService {
     this.isConnected = true;
     this.isDisconnecting = false;
     this.hasReportedFatalError = false;
+    this.isReportingError = false;
 
     // 1. Acquire Microphone Stream FIRST
     try {
@@ -158,7 +176,6 @@ export class LiveApiService {
               this.callbacks.onStateChange('CONNECTED');
               this.startAudioInputStreaming(sessionPromise);
             } else {
-              // User cancelled while connecting
               sessionPromise.then(s => s.close());
             }
           },
@@ -168,12 +185,15 @@ export class LiveApiService {
           },
           onclose: () => {
             console.log("Session closed by server");
-            if (this.isConnected && !this.isDisconnecting && !this.hasReportedFatalError) {
+            if (this.isConnected && !this.isDisconnecting) {
+                // If server closes unexpectedly (e.g. timeout), treat as disconnect
                 this.stop();
             }
           },
           onerror: (e: any) => {
-            if (this.isDisconnecting || this.hasReportedFatalError) return; 
+            // Guard against multiple simultaneous error reports
+            if (this.isDisconnecting || this.hasReportedFatalError || this.isReportingError) return;
+            this.isReportingError = true;
             
             let errorStr = "Unknown error";
             if (e instanceof Error) {
@@ -190,20 +210,18 @@ export class LiveApiService {
                 }
             }
 
-            console.error('Session error:', errorStr, e);
+            console.error('Session error object:', e);
             
-            // Deduplicate: If we are already handling an error, stop.
-            if (this.hasReportedFatalError) return;
-
-            // Treat Network Errors as warnings first
+            // Filter common transient errors
             if (errorStr.includes("Network error") || errorStr.includes("Failed to fetch") || errorStr.includes("WebSocket")) {
-                console.warn("Network instability detected.");
+                console.warn("Network instability warning:", errorStr);
+                this.isReportingError = false; // Allow future errors if this one wasn't fatal
                 return;
             }
 
-            // Internal Errors usually require a full reset
             if (errorStr.includes("Internal error")) {
-                this.handleFatalError("Session interrupted. Please restart.");
+                // "Internal error occurred" is fatal but we want to show a nice message
+                this.handleFatalError("Session interrupted (Internal Error). Please restart.");
             } else {
                 this.handleFatalError("Connection error: " + errorStr);
             }
@@ -233,17 +251,20 @@ export class LiveApiService {
     
     try {
         const session = await sessionPromise;
-        // Re-check state after await
+        // Double check state after awaiting the session
         if (!this.isConnected || this.isDisconnecting || this.hasReportedFatalError) return;
         
         await action(session);
     } catch (e: any) {
-        if (!this.isConnected || this.isDisconnecting) return; // Ignore errors during teardown
+        // Suppress errors during disconnection
+        if (!this.isConnected || this.isDisconnecting) return; 
         
-        console.debug("SafeSend failed:", e);
-        // If an Internal Error occurs during send, trigger fatal handling to prevent queue backup
-        if (String(e).includes("Internal error")) {
-            this.handleFatalError("Session connection lost.");
+        const errStr = String(e);
+        console.debug("SafeSend failed:", errStr);
+        
+        // If it's an internal error during a send, it's likely fatal for this session
+        if (errStr.includes("Internal error") && !this.hasReportedFatalError) {
+             this.handleFatalError("Session error during data transmission.");
         }
     }
   }
@@ -251,8 +272,8 @@ export class LiveApiService {
   private handleFatalError(msg: string) {
       if (this.hasReportedFatalError) return;
       this.hasReportedFatalError = true;
+      this.isDisconnecting = true; // Stop everything immediately
       console.error("Fatal Error Triggered:", msg);
-      
       this.callbacks.onError(msg);
       this.callbacks.onStateChange('ERROR');
       this.stop();
@@ -269,11 +290,10 @@ export class LiveApiService {
     this.isProcessorRunning = true;
     this.audioBufferChunks = [];
     this.currentBufferSize = 0;
-    this.audioSendQueue = Promise.resolve(); 
+    this.audioSendQueue = Promise.resolve();
 
     this.processor.onaudioprocess = (audioProcessingEvent) => {
-      // Strict guard: stop processing if disconnecting or error occurred
-      if (!this.isConnected || !this.isProcessorRunning || this.isDisconnecting || this.hasReportedFatalError) return;
+      if (!this.isConnected || !this.isProcessorRunning || this.isDisconnecting) return;
 
       const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
       const downsampledData = downsampleTo16k(inputData, this.inputAudioContext!.sampleRate);
@@ -286,19 +306,17 @@ export class LiveApiService {
           this.audioBufferChunks = [];
           this.currentBufferSize = 0;
 
-          // Don't send empty or tiny chunks
-          if (mergedBuffer.length < 128) return;
+          if (mergedBuffer.length === 0) return;
 
           const pcmBlob = createPcmBlob(mergedBuffer);
 
-          // SERIALIZED SENDING
           this.audioSendQueue = this.audioSendQueue
               .then(() => this.safeSend(async (session) => {
                   await session.sendRealtimeInput({ media: pcmBlob });
               }, sessionPromise))
               .catch((e) => {
-                   // Swallow errors in the chain
-                   console.debug("Audio queue error:", e);
+                   // Just log debug, safeSend handles the fatal logic if needed
+                   console.debug("Audio queue chain error:", e);
               });
       }
     };
@@ -311,70 +329,70 @@ export class LiveApiService {
   private async handleMessage(message: LiveServerMessage, sessionPromise: Promise<any>) {
     if (this.isDisconnecting || this.hasReportedFatalError) return;
 
-    try {
-        // 1. Transcript
-        if (message.serverContent?.inputTranscription) {
-          this.currentInputTranscription += message.serverContent.inputTranscription.text;
-        }
-        if (message.serverContent?.turnComplete && this.currentInputTranscription.trim()) {
-           this.callbacks.onUserTranscript(this.currentInputTranscription.trim());
-           this.currentInputTranscription = '';
-        }
+    // 1. Transcript
+    if (message.serverContent?.inputTranscription) {
+      this.currentInputTranscription += message.serverContent.inputTranscription.text;
+    }
+    if (message.serverContent?.turnComplete && this.currentInputTranscription.trim()) {
+       this.callbacks.onUserTranscript(this.currentInputTranscription.trim());
+       this.currentInputTranscription = '';
+    }
 
-        // 2. Batched Tool Responses
-        if (message.toolCall) {
-          const functionResponses = [];
-          for (const fc of message.toolCall.functionCalls) {
-            if (fc.name === 'update_subtitles') {
-              this.callbacks.onSubtitle(fc.args as unknown as SubtitleData);
-            } else if (fc.name === 'provide_pronunciation_feedback') {
-               this.callbacks.onPronunciationFeedback(fc.args as unknown as PronunciationFeedback);
-            }
-            functionResponses.push({
-              id: fc.id,
-              name: fc.name,
-              response: { result: 'ok' }
-            });
-          }
-
-          if (functionResponses.length > 0) {
-            this.audioSendQueue = this.audioSendQueue
-                .then(() => this.safeSend(async (session) => {
-                    await session.sendToolResponse({ functionResponses });
-                }, sessionPromise))
-                .catch(e => console.debug("Tool response queue error:", e));
-          }
+    // 2. Batched Tool Responses
+    if (message.toolCall) {
+      const functionResponses = [];
+      for (const fc of message.toolCall.functionCalls) {
+        if (fc.name === 'update_subtitles') {
+          this.callbacks.onSubtitle(fc.args as unknown as SubtitleData);
+        } else if (fc.name === 'provide_pronunciation_feedback') {
+           this.callbacks.onPronunciationFeedback(fc.args as unknown as PronunciationFeedback);
         }
+        functionResponses.push({
+          id: fc.id,
+          name: fc.name,
+          response: { result: 'ok' }
+        });
+      }
 
-        // 3. Audio Output
-        const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-        if (base64Audio && this.outputAudioContext && this.outputAnalyser && this.isConnected) {
-            const audioBytes = base64ToBytes(base64Audio);
-            const audioBuffer = await decodeAudioData(audioBytes, this.outputAudioContext, 24000, 1);
-            
-            this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
+      if (functionResponses.length > 0) {
+        this.audioSendQueue = this.audioSendQueue
+            .then(() => this.safeSend(async (session) => {
+                await session.sendToolResponse({ functionResponses });
+            }, sessionPromise))
+            .catch(e => console.debug("Tool response queue error:", e));
+      }
+    }
 
-            const source = this.outputAudioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(this.outputAnalyser);
-            this.outputAnalyser.connect(this.outputAudioContext.destination);
-            source.start(this.nextStartTime);
-            this.nextStartTime += audioBuffer.duration;
-            
-            this.sources.add(source);
-            source.onended = () => this.sources.delete(source);
-        }
+    // 3. Audio Output
+    const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+    if (base64Audio && this.outputAudioContext && this.outputAnalyser && this.isConnected) {
+      try {
+        const audioBytes = base64ToBytes(base64Audio);
+        const audioBuffer = await decodeAudioData(audioBytes, this.outputAudioContext, 24000, 1);
+        
+        this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
 
-        if (message.serverContent?.interrupted) {
-          this.sources.forEach(source => { try { source.stop(); } catch(e) {} });
-          this.sources.clear();
-          this.nextStartTime = 0;
-          this.currentInputTranscription = '';
-          this.audioBufferChunks = [];
-          this.currentBufferSize = 0;
-        }
-    } catch (e) {
-        console.error("Error processing message:", e);
+        const source = this.outputAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.outputAnalyser);
+        this.outputAnalyser.connect(this.outputAudioContext.destination);
+        source.start(this.nextStartTime);
+        this.nextStartTime += audioBuffer.duration;
+        
+        this.sources.add(source);
+        source.onended = () => this.sources.delete(source);
+      } catch (err) {
+        console.error("Audio decode error:", err);
+      }
+    }
+
+    if (message.serverContent?.interrupted) {
+      this.sources.forEach(source => { try { source.stop(); } catch(e) {} });
+      this.sources.clear();
+      this.nextStartTime = 0;
+      this.currentInputTranscription = '';
+      this.audioBufferChunks = [];
+      this.currentBufferSize = 0;
     }
   }
 
@@ -396,12 +414,12 @@ export class LiveApiService {
   }
 
   stop() {
-    if (this.isDisconnecting) return; // Already stopping
+    // Immediate state lock to prevent new actions
     this.isDisconnecting = true;
     this.isConnected = false;
     this.isProcessorRunning = false;
 
-    // Break the audio loop immediately
+    // Cut off the audio processor loop immediately
     if (this.processor) {
         this.processor.onaudioprocess = null;
         try { this.processor.disconnect(); } catch (e) {}
@@ -419,7 +437,9 @@ export class LiveApiService {
     }
 
     if (this.mediaStream) {
-        this.mediaStream.getTracks().forEach(track => track.stop());
+        this.mediaStream.getTracks().forEach(track => {
+            try { track.stop(); } catch (e) {}
+        });
         this.mediaStream = null;
     }
 
@@ -429,6 +449,7 @@ export class LiveApiService {
     this.sources.clear();
 
     if (this.session) {
+      // We ignore errors here because we are intentionally closing
       this.session.then(s => s.close()).catch(() => {});
       this.session = null;
     }
@@ -438,7 +459,6 @@ export class LiveApiService {
       this.animationFrameId = null;
     }
 
-    // Close contexts asynchronously
     if (this.inputAudioContext) {
       this.inputAudioContext.close().catch(() => {});
       this.inputAudioContext = null;
@@ -448,12 +468,13 @@ export class LiveApiService {
       this.outputAudioContext = null;
     }
     
-    // Clear buffer to be safe
     this.audioBufferChunks = [];
     this.currentBufferSize = 0;
     
-    // We don't set state to DISCONNECTED here if we have a fatal error, 
-    // because handleFatalError sets state to ERROR.
+    // Reset queue
+    this.audioSendQueue = Promise.resolve();
+    
+    // Only update state if we didn't crash
     if (!this.hasReportedFatalError) {
         this.callbacks.onStateChange('DISCONNECTED');
     }

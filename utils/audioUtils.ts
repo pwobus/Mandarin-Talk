@@ -13,13 +13,9 @@ export function base64ToBytes(base64: string): Uint8Array {
 export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const len = bytes.byteLength;
-  // Reduced chunk size to 8192 to be extremely safe against stack overflow on all browsers
-  const chunk = 8192; 
-  for (let i = 0; i < len; i += chunk) {
-    binary += String.fromCharCode.apply(
-      null,
-      bytes.subarray(i, Math.min(i + chunk, len)) as unknown as number[]
-    );
+  // Use a simple loop to avoid stack overflow with String.fromCharCode.apply on large buffers
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
 }
@@ -45,6 +41,7 @@ export async function decodeAudioData(
 }
 
 export function downsampleTo16k(buffer: Float32Array, fromSampleRate: number): Float32Array {
+  if (buffer.length === 0) return new Float32Array(0);
   if (fromSampleRate === 16000) return buffer;
   
   const ratio = fromSampleRate / 16000;

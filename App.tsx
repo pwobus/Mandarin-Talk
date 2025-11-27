@@ -105,10 +105,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white relative overflow-hidden font-sans flex flex-col">
+    // fixed top-0 left-0 w-full h-[100svh] ensures the app fits within the Small Viewport Height
+    // This prevents the bottom controls from being covered by mobile browser navigation bars.
+    <div className="fixed top-0 left-0 w-full h-[100svh] bg-gradient-to-b from-gray-900 to-gray-800 text-white overflow-hidden font-sans flex flex-col">
       
       {/* 3D Background / Avatar Layer */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <Avatar3D volume={audioVolume} />
       </div>
 
@@ -121,18 +123,18 @@ const App: React.FC = () => {
       />
 
       {/* UI Overlay Layer */}
-      <div className="relative z-10 flex flex-col h-full min-h-screen pointer-events-none">
+      <div className="relative z-10 flex flex-col h-full pointer-events-none">
         
-        {/* Header */}
-        <header className="flex items-center justify-between p-6 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto z-20">
+        {/* Header - Fixed at Top */}
+        <header className="flex-none flex items-center justify-between p-4 lg:p-6 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto z-20">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
                     <div className="bg-emerald-500 p-2 rounded-lg shadow-lg shadow-emerald-500/20">
-                        <MessageSquare className="w-6 h-6 text-white" />
+                        <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight text-white">Mandarin Talk</h1>
-                        <p className="text-xs text-gray-300 font-medium">AI Pronunciation Coach</p>
+                        <h1 className="text-lg lg:text-xl font-bold tracking-tight text-white">Mandarin Talk</h1>
+                        <p className="text-[10px] lg:text-xs text-gray-300 font-medium hidden sm:block">AI Pronunciation Coach</p>
                     </div>
                 </div>
 
@@ -145,7 +147,7 @@ const App: React.FC = () => {
                 )}
             </div>
             
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
                 {/* Speaking Rate Control */}
                 <button
                     onClick={toggleSpeakingRate}
@@ -182,7 +184,7 @@ const App: React.FC = () => {
 
         {/* Error Notification */}
         {errorMessage && (
-            <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-50 w-auto max-w-md pointer-events-auto">
+            <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-md pointer-events-auto">
                 <div className="bg-red-500/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-red-400/30 animate-in fade-in slide-in-from-top-4">
                     <AlertCircle className="w-6 h-6 shrink-0" />
                     <p className="font-medium text-sm">{errorMessage}</p>
@@ -191,36 +193,50 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* Main Layout Grid */}
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-4 gap-4 px-6 relative z-10 h-[calc(100vh-180px)]">
-            
-            {/* Left Column: Conversation History */}
-            <div className="hidden lg:block lg:col-span-1 h-full pointer-events-auto rounded-2xl overflow-hidden shadow-2xl border border-white/5">
-                <HistoryPanel history={history} />
-            </div>
-
-            {/* Center Column: Avatar Space & Subtitles */}
-            <div className="lg:col-span-2 flex flex-col justify-end pb-10 pointer-events-auto">
-               <div className="bg-black/40 backdrop-blur-md rounded-3xl p-5 md:p-8 border border-white/10 shadow-2xl transition-all duration-500 hover:bg-black/50 mx-4 lg:mx-12 mb-8">
-                 <SubtitleDisplay data={currentSubtitle} />
-                 {!currentSubtitle && activeLesson && (
-                    <div className="text-center text-indigo-200/60 text-sm mt-2">
-                        Lesson: {activeLesson.title} — Press Start to Begin
-                    </div>
-                 )}
-               </div>
-            </div>
-
-            {/* Right Column: Feedback Card */}
-            <div className="lg:col-span-1 flex flex-col items-center lg:items-end justify-start pt-4 lg:pt-10 pointer-events-auto">
-                <div className="w-full max-w-sm">
-                     <FeedbackCard feedback={pronunciationFeedback} />
+        {/* 
+            Main Content Area - SCROLLABLE
+            We use flex-1 min-h-0 to allow this section to fill remaining space.
+            overflow-y-auto enables scrolling if content overflows.
+        */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {/* 
+                Grid Layout 
+                pb-32 ensures that the bottom-most content (Pronunciation Check) 
+                can be scrolled up ABOVE the fixed Controls footer.
+            */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 px-4 lg:px-6 pt-4 pb-32 w-full max-w-7xl mx-auto">
+                
+                {/* Left Column: Conversation History */}
+                <div className="hidden lg:block lg:col-span-1 h-[600px] pointer-events-auto rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+                    <HistoryPanel history={history} />
                 </div>
+
+                {/* Center Column: Avatar Space & Subtitles */}
+                <div className="lg:col-span-2 flex flex-col justify-end pointer-events-auto min-h-[300px] lg:min-h-0">
+                   <div className="bg-black/40 backdrop-blur-md rounded-3xl p-6 lg:p-8 border border-white/10 shadow-2xl transition-all duration-500 hover:bg-black/50 mx-2 lg:mx-8">
+                     <SubtitleDisplay data={currentSubtitle} />
+                     {!currentSubtitle && activeLesson && (
+                        <div className="text-center text-indigo-200/60 text-sm mt-2">
+                            Lesson: {activeLesson.title} — Press Start to Begin
+                        </div>
+                     )}
+                   </div>
+                </div>
+
+                {/* Right Column: Feedback Card */}
+                <div className="lg:col-span-1 flex flex-col items-center lg:items-end justify-start pt-2 lg:pt-10 pointer-events-auto">
+                    <div className="w-full max-w-sm">
+                         <FeedbackCard feedback={pronunciationFeedback} />
+                    </div>
+                </div>
+
+                {/* Mobile History View (Optional: Could add here if needed for mobile) */}
             </div>
         </div>
 
-        {/* Controls Area */}
-        <div className="w-full flex justify-center pb-8 pointer-events-auto z-20">
+        {/* Controls Area - Fixed at Bottom (Visually) */}
+        {/* Increased bottom padding (pb-8 md:pb-10) ensures visibility on devices with bottom nav bars */}
+        <div className="flex-none w-full flex justify-center pb-8 md:pb-10 pt-4 pointer-events-auto z-20 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent">
             <Controls 
                 connectionState={connectionState} 
                 onConnect={handleConnect} 
