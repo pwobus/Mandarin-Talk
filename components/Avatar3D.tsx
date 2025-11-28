@@ -240,9 +240,9 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
         3. Added fallback ambient lights to ensure visibility without Environment.
         4. gl={{ alpha: false }} for more stable context.
       */}
-      <Canvas 
-        camera={{ position: [0, 0, 4], fov: 50 }} 
-        dpr={1} 
+      <Canvas
+        camera={{ position: [0, 0.5, 4.5], fov: 50 }}
+        dpr={1}
         gl={{ alpha: false, antialias: true }}
       >
         <color attach="background" args={['#252525']} />
@@ -253,8 +253,8 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
         <directionalLight position={[-5, 5, 2]} intensity={0.8} />
         <spotLight position={[0, 5, 2]} angle={0.5} penumbra={1} intensity={1.0} />
 
-        {/* Position moved up to give clear space for subtitles at the bottom */}
-        <group position={[0, 1, 0]}>
+        {/* Position moved up and slightly scaled down to keep the face above subtitle overlay on Linux browsers */}
+        <group position={[0, 1.6, 0]} scale={0.9}>
              <CartoonHead volume={volume} />
         </group>
 
@@ -263,7 +263,7 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
              enablePan={false}
              minPolarAngle={Math.PI / 2 - 0.2}
              maxPolarAngle={Math.PI / 2 + 0.2}
-             target={[0, 1, 0]}
+             target={[0, 1.6, 0]}
         />
       </Canvas>
     </div>
