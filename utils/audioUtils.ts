@@ -13,9 +13,13 @@ export function base64ToBytes(base64: string): Uint8Array {
 export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const len = bytes.byteLength;
-  // Use a simple loop to avoid stack overflow with String.fromCharCode.apply on large buffers
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  // 32768 is a safe chunk size for String.fromCharCode.apply to avoid stack overflow
+  const CHUNK_SIZE = 32768; 
+  
+  for (let i = 0; i < len; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, len));
+    // String.fromCharCode.apply is significantly faster than a manual loop
+    binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
   }
   return btoa(binary);
 }
@@ -77,19 +81,28 @@ export function concatenateFloat32Buffers(buffers: Float32Array[]): Float32Array
 }
 
 export function createPcmBlob(data: Float32Array): Blob {
-  const l = data.length;
-  const int16 = new Int16Array(l);
-  for (let i = 0; i < l; i++) {
+  // Create a buffer for the Int16 data
+  const buffer = new ArrayBuffer(data.length * 2);
+  const view = new DataView(buffer);
+  
+  for (let i = 0; i < data.length; i++) {
     let val = data[i];
     // Safety check for bad audio data
     if (!Number.isFinite(val)) val = 0;
     
-    // Clamp values to [-1, 1] before converting
+    // Clamp values to [-1, 1]
     const s = Math.max(-1, Math.min(1, val));
-    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    
+    // Convert to 16-bit integer
+    // s < 0 ? s * 0x8000 : s * 0x7FFF
+    const int16 = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    
+    // Explicitly write Little Endian (true) to ensure API compatibility
+    view.setInt16(i * 2, int16, true);
   }
+
   return {
-    data: bytesToBase64(new Uint8Array(int16.buffer)),
+    data: bytesToBase64(new Uint8Array(buffer)),
     mimeType: 'audio/pcm;rate=16000',
   };
 }

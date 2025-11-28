@@ -65,7 +65,8 @@ export class LiveApiService {
   // Audio Accumulation Buffer
   private audioBufferChunks: Float32Array[] = [];
   private currentBufferSize = 0;
-  // Send chunks every ~256ms (4096 samples at 16k)
+  // 4096 samples @ 16kHz = 256ms. This is a stable balance between latency and request frequency.
+  // 8192 (512ms) was too large and caused timeouts/internal errors.
   private readonly BUFFER_THRESHOLD = 4096; 
   
   // Audio Send Queue for Serialization
@@ -174,7 +175,12 @@ export class LiveApiService {
           onopen: () => {
             if (this.isConnected && !this.isDisconnecting) {
               this.callbacks.onStateChange('CONNECTED');
-              this.startAudioInputStreaming(sessionPromise);
+              // Increased delay to 500ms to ensure server session is fully stabilized before sending PCM
+              setTimeout(() => {
+                if (this.isConnected && !this.isDisconnecting) {
+                   this.startAudioInputStreaming(sessionPromise);
+                }
+              }, 500);
             } else {
               sessionPromise.then(s => s.close());
             }
@@ -355,6 +361,7 @@ export class LiveApiService {
       }
 
       if (functionResponses.length > 0) {
+        // Prioritize tool response by appending to queue immediately
         this.audioSendQueue = this.audioSendQueue
             .then(() => this.safeSend(async (session) => {
                 await session.sendToolResponse({ functionResponses });

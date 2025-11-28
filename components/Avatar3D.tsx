@@ -3,6 +3,34 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Sphere, Cylinder, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Add type support for R3F intrinsic elements
+// Augment both global JSX and React.JSX to ensure types are picked up correctly
+interface ThreeCustomElements {
+  group: any;
+  mesh: any;
+  cylinderGeometry: any;
+  planeGeometry: any;
+  sphereGeometry: any;
+  meshStandardMaterial: any;
+  meshBasicMaterial: any;
+  ambientLight: any;
+  directionalLight: any;
+  spotLight: any;
+  color: any;
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends ThreeCustomElements {}
+  }
+}
+
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicElements extends ThreeCustomElements {}
+  }
+}
+
 interface Avatar3DProps {
   volume: number; // 0 to 1
 }
