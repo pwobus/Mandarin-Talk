@@ -57,9 +57,13 @@ export class LiveApiService {
   private animationFrameId: number | null = null;
   private isProcessorRunning = false;
   private isConnected = false;
-  private isDisconnecting = false; 
-  private hasReportedFatalError = false; 
+  private isDisconnecting = false;
+  private hasReportedFatalError = false;
   private isReportingError = false; // Semaphore to prevent double error handling
+  private internalErrorRetryCount = 0;
+  private readonly MAX_INTERNAL_ERROR_RETRIES = 1;
+  private lastScenarioInstruction?: string;
+  private lastSpeakingRate: number = 1.0;
   private currentInputTranscription = '';
 
   // Audio Accumulation Buffer
@@ -106,6 +110,9 @@ export class LiveApiService {
     this.isDisconnecting = false;
     this.hasReportedFatalError = false;
     this.isReportingError = false;
+    this.internalErrorRetryCount = 0;
+    this.lastScenarioInstruction = scenarioInstruction;
+    this.lastSpeakingRate = speakingRate;
 
     // 1. Acquire Microphone Stream FIRST
     try {
@@ -226,8 +233,8 @@ export class LiveApiService {
             }
 
             if (errorStr.includes("Internal error")) {
-                // "Internal error occurred" is fatal but we want to show a nice message
-                this.handleFatalError("Session interrupted (Internal Error). Please restart.");
+                // Attempt a quick reconnect on transient internal errors before surfacing fatal state
+                this.handleInternalErrorRecovery('session');
             } else {
                 this.handleFatalError("Connection error: " + errorStr);
             }
@@ -267,10 +274,10 @@ export class LiveApiService {
         
         const errStr = String(e);
         console.debug("SafeSend failed:", errStr);
-        
+
         // If it's an internal error during a send, it's likely fatal for this session
         if (errStr.includes("Internal error") && !this.hasReportedFatalError) {
-             this.handleFatalError("Session error during data transmission.");
+             this.handleInternalErrorRecovery('data transmission');
         }
     }
   }
@@ -283,6 +290,35 @@ export class LiveApiService {
       this.callbacks.onError(msg);
       this.callbacks.onStateChange('ERROR');
       this.stop();
+  }
+
+  private handleInternalErrorRecovery(origin: string) {
+      if (this.internalErrorRetryCount >= this.MAX_INTERNAL_ERROR_RETRIES) {
+          this.handleFatalError("Session interrupted (Internal Error). Please restart.");
+          return;
+      }
+
+      this.internalErrorRetryCount += 1;
+      console.warn(`Internal error encountered during ${origin}. Attempting quick reconnect...`);
+
+      // Stop current session but immediately move back to connecting state
+      this.stop();
+      this.isDisconnecting = false;
+      this.hasReportedFatalError = false;
+      this.isReportingError = false;
+
+      this.callbacks.onError("Session hiccup detected. Reconnecting...");
+      this.callbacks.onStateChange('CONNECTING');
+
+      const scenario = this.lastScenarioInstruction;
+      const speakingRate = this.lastSpeakingRate;
+
+      // Give the server a brief moment before re-establishing the session
+      setTimeout(() => {
+          if (!this.hasReportedFatalError && !this.isConnected && !this.isDisconnecting) {
+              this.connect(scenario, speakingRate);
+          }
+      }, 500);
   }
 
   private startAudioInputStreaming(sessionPromise: Promise<any>) {
