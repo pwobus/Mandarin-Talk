@@ -102,7 +102,7 @@ export class LiveApiService {
       }
   };
 
-  async connect(scenarioInstruction?: string, speakingRate: number = 1.0) {
+  async connect(scenarioInstruction?: string, speakingRate: number = 1.0, resetInternalErrorRetries: boolean = true) {
     if (this.session || this.isConnected) return;
 
     this.callbacks.onStateChange('CONNECTING');
@@ -110,7 +110,9 @@ export class LiveApiService {
     this.isDisconnecting = false;
     this.hasReportedFatalError = false;
     this.isReportingError = false;
-    this.internalErrorRetryCount = 0;
+    if (resetInternalErrorRetries) {
+      this.internalErrorRetryCount = 0;
+    }
     this.lastScenarioInstruction = scenarioInstruction;
     this.lastSpeakingRate = speakingRate;
 
@@ -316,7 +318,7 @@ export class LiveApiService {
       // Give the server a brief moment before re-establishing the session
       setTimeout(() => {
           if (!this.hasReportedFatalError && !this.isConnected && !this.isDisconnecting) {
-              this.connect(scenario, speakingRate);
+              this.connect(scenario, speakingRate, false);
           }
       }, 500);
   }
