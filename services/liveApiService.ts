@@ -315,7 +315,7 @@ export class LiveApiService {
 
       // Give the server a brief moment before re-establishing the session
       setTimeout(() => {
-          if (!this.hasReportedFatalError && !this.isConnected) {
+          if (!this.hasReportedFatalError && !this.isConnected && !this.isDisconnecting) {
               this.connect(scenario, speakingRate);
           }
       }, 500);
