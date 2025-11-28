@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Sphere, Cylinder, OrbitControls } from '@react-three/drei';
+import { Sphere, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Add type support for R3F intrinsic elements
@@ -47,11 +47,6 @@ const hairMaterial = new THREE.MeshStandardMaterial({
   color: '#3B2F2F', // Dark Brown
   roughness: 0.8,
   metalness: 0.0,
-});
-
-const shirtMaterial = new THREE.MeshStandardMaterial({
-  color: '#4F46E5', // Indigo
-  roughness: 0.6,
 });
 
 const eyeWhiteMaterial = new THREE.MeshStandardMaterial({ color: '#FFFFFF' });
@@ -231,15 +226,6 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             <Sphere args={[0.2, 16, 16]} position={[-0.95, 0, 0]} scale={[0.5, 1, 1]} material={skinMaterial} />
             <Sphere args={[0.2, 16, 16]} position={[0.95, 0, 0]} scale={[0.5, 1, 1]} material={skinMaterial} />
             
-            {/* Neck */}
-            <Cylinder args={[0.25, 0.25, 0.5, 16]} position={[0, -1.1, 0]} material={skinMaterial} />
-            
-            {/* Shoulders / Body Hint */}
-            <group position={[0, -1.6, 0]}>
-                 <mesh material={shirtMaterial} rotation={[0, 0, Math.PI / 2]}>
-                     <cylinderGeometry args={[0.6, 0.6, 2.2, 16]} />
-                 </mesh>
-            </group>
         </group>
     );
 };
@@ -267,16 +253,17 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
         <directionalLight position={[-5, 5, 2]} intensity={0.8} />
         <spotLight position={[0, 5, 2]} angle={0.5} penumbra={1} intensity={1.0} />
 
-        {/* Position moved up to y=0.8 to give clear space for subtitles at the bottom */}
-        <group position={[0, 0.8, 0]}>
+        {/* Position moved up to give clear space for subtitles at the bottom */}
+        <group position={[0, 1, 0]}>
              <CartoonHead volume={volume} />
         </group>
 
-        <OrbitControls 
-             enableZoom={false} 
+        <OrbitControls
+             enableZoom={false}
              enablePan={false}
-             minPolarAngle={Math.PI / 2 - 0.2} 
-             maxPolarAngle={Math.PI / 2 + 0.2} 
+             minPolarAngle={Math.PI / 2 - 0.2}
+             maxPolarAngle={Math.PI / 2 + 0.2}
+             target={[0, 1, 0]}
         />
       </Canvas>
     </div>
