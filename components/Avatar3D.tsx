@@ -254,7 +254,7 @@ const Avatar3D: React.FC<Avatar3DProps> = ({ volume }) => {
         <spotLight position={[0, 5, 2]} angle={0.5} penumbra={1} intensity={1.0} />
 
         {/* Position moved up and slightly scaled down to keep the face above subtitle overlay on Linux browsers */}
-        <group position={[0, 1.6, 0]} scale={0.9}>
+        <group position={[0, 3.0, 0]} scale={0.9}>
              <CartoonHead volume={volume} />
         </group>
 
