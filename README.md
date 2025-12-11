@@ -34,9 +34,6 @@ Control the pace. Toggle between Slow, Normal, and Fast speeds to match your cur
 📜 Conversation History
 Review your chats at any time. A full transcript of your session helps you study new words and track your progress over time.
 
-Don't just learn Mandarin—live it. Start your conversation with Mandarin Talk today.
-
-
 # Run and deploy your AI Studio app
 
 This contains everything you need to run your app locally.
