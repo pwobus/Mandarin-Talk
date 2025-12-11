@@ -6,23 +6,23 @@ Mandarin Talk: Your AI-Powered Language Companion
 
 Unlock the confidence to speak Mandarin Chinese anytime, anywhere. Mandarin Talk is an immersive, real-time conversation partner powered by the cutting-edge Gemini Live API, designed to bridge the gap between "studying" a language and actually speaking it.
 
-Whether you're a absolute beginner or an advanced learner, Mandarin Talk provides a safe, low-pressure environment to practice your tones, expand your vocabulary, and master real-world scenarios.
-Key Features
+For beginners or an advanced learners, this provides a safe, low-pressure environment to practice your tones, expand your vocabulary, and master real-world scenarios.
+
+Key Features:
 
 🎙️ Real-Time Gemini Live Conversations
-Experience natural, low-latency dialogue that feels like talking to a human. Our AI partner is patient, friendly, and available 24/7 to help you practice.
+Natural, low-latency dialogue.
 
 🤖 Animated 3D Avatar
-Stay engaged with a reactive 3D companion whose expressions and lip-syncing bring your conversation to life, making the learning experience truly immersive.
 
 ✨ Triple-Layered Subtitles
-Never feel lost. Every sentence the AI speaks is instantly transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
+\Every sentence the AI speaks is transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
 
 🎯 Instant Pronunciation Coaching
-Receive immediate, constructive feedback. Our AI analyzes your speech and provides a "Pronunciation Score" alongside specific tips on how to improve your tones and articulation.
+Analyzes your speech and provides a "Pronunciation Score" alongside specific tips on how to improve your tones and articulation.
 
 📚 Curated Lesson Library
-Step into structured roleplay scenarios, including:
+Structured roleplay scenarios, including:
 The Coffee Shop: Practice ordering your favorite drink.
 The Taxi Ride: Navigate the streets of Beijing with confidence.
 Market Bargaining: Master the art of the deal.
