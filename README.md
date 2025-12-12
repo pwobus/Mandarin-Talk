@@ -1,12 +1,8 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 Mandarin Talk: Your AI-Powered Language Companion
 
-Unlock the confidence to speak Mandarin Chinese anytime, anywhere. Mandarin Talk is an immersive, real-time conversation partner powered by the cutting-edge Gemini Live API, designed to bridge the gap between "studying" a language and actually speaking it.
+An immersive, real-time conversation partner powered by the Gemini Live API, designed to bridge the gap between "studying" a language and actually speaking it.
 
-For beginners or an advanced learners, this provides a safe, low-pressure environment to practice your tones, expand your vocabulary, and master real-world scenarios.
+Provides a low-pressure environment to practice tones, expand vocabulary, and master real-world scenarios.
 
 Key Features:
 
