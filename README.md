@@ -10,7 +10,7 @@ Natural, low-latency dialogue.
 🤖 Animated 3D Avatar
 
 ✨ Triple-Layered Subtitles
-\Every sentence the AI speaks is transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
+Every sentence the AI speaks is transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
 
 🎯 Instant Pronunciation Coaching
 Analyzes your speech and provides a "Pronunciation Score" alongside specific tips on how to improve your tones and articulation.
@@ -32,7 +32,7 @@ Review your chats at any time. A full transcript of your session helps you study
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
+View this app in AI Studio: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
 
 ## Run Locally
 
