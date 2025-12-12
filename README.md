@@ -1,4 +1,4 @@
-This is an immersive, real-time conversation partner powered by the Gemini Live API, designed to bridge the gap between "studying" a language and actually speaking it.
+An immersive, real-time conversation partner powered by the Gemini Live API, designed to bridge the gap between "studying" a language and actually speaking it.
 
 Provides a low-pressure environment to practice tones, expand vocabulary, and master real-world scenarios.
 
@@ -28,13 +28,9 @@ Control the pace. Toggle between Slow, Normal, and Fast speeds to match your cur
 📜 Conversation History
 Review your chats at any time. A full transcript of your session helps you study new words and track your progress over time.
 
-# Run and deploy your AI Studio app
+demo: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
 
-This contains everything you need to run your app locally.
-
-View this app in AI Studio: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
-
-## Run Locally
+# Run and deploy locally
 
 **Prerequisites:**  Node.js
 
