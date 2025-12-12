@@ -30,7 +30,7 @@ Review your chats at any time. A full transcript of your session helps you study
 
 demo: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
 
-Run and deploy locally
+Run and deploy locally:
 
 **Prerequisites:**  Node.js
 
