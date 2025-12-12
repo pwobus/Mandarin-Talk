@@ -1,4 +1,4 @@
-An immersive, real-time conversation partner powered by the Gemini Live API, designed to bridge the gap between "studying" Mandarin and actually speaking it.
+An immersive, real-time conversation partner powered by the Gemini Live API, designed to bridge the gap between studying Mandarin and actually speaking it.
 
 Provides a low-pressure environment to practice tones, expand vocabulary, and master real-world scenarios.
 
