@@ -1,4 +1,4 @@
-An immersive, real-time conversation partner powered by the Gemini Live API.
+A real-time conversation partner powered by the Gemini Live API.
 
 Provides a low-pressure environment to practice tones, expand vocabulary, and master real-world scenarios.
 
