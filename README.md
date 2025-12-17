@@ -25,7 +25,7 @@ Control the pace. Toggle between Slow, Normal, and Fast speeds to match your cur
  Review your chats at any time. A full transcript of your session helps you study new words and track your progress over time.
  
 ## Screenshots
-(./sc_02.png)
+![Mandarin talk](./sc_02.png)
 
 demo: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
 
