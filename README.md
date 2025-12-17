@@ -9,23 +9,23 @@ Natural, low-latency dialogue.
 
 🤖 Animated 3D Avatar
 
-✨ Triple-Layered Subtitles
+✨ Triple-Layered Subtitles.
 Every sentence the AI speaks is transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
 
-🎯 Instant Pronunciation Coaching
+🎯 Instant Pronunciation Coaching.
 Analyzes your speech and provides a "Pronunciation Score" alongside specific tips on how to improve your tones and articulation.
 
-📚 Curated Lesson Library
+📚 Curated Lesson Library.
 Structured roleplay scenarios, including:
 The Coffee Shop: Practice ordering your favorite drink.
 The Taxi Ride: Navigate the streets of Beijing with confidence.
 Market Bargaining: Master the art of the deal.
 Business Meetings: Learn formal etiquette for professional success.
 
-🐢 Adjustable Speaking Rates
+🐢 Adjustable Speaking Rates.
 Control the pace. Toggle between Slow, Normal, and Fast speeds to match your current listening level.
 
-📜 Conversation History
+📜 Conversation History.
 Review your chats at any time. A full transcript of your session helps you study new words and track your progress over time.
 
 demo: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
