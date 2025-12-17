@@ -18,7 +18,7 @@ Analyzes your speech and provides a "Pronunciation Score" alongside specific tip
 📚 **Curated Lesson Library**
 Structured roleplay scenarios, including: The Coffee Shop: Practice ordering your favorite drink. The Taxi Ride: Navigate the streets of Beijing with confidence. Market Bargaining: Master the art of the deal. Business Meetings: Learn formal etiquette for professional success.
 
-🐢 **Adjustable Speaking Rates** 
+🐢 **Adjustable Speaking Rates**
 Control the pace. Toggle between Slow, Normal, and Fast speeds to match your current listening level.
 
 📜 **Conversation History**
