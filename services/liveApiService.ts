@@ -61,20 +61,22 @@ export class LiveApiService {
   private hasReportedFatalError = false;
   private isReportingError = false; // Semaphore to prevent double error handling
   private internalErrorRetryCount = 0;
-  private readonly MAX_INTERNAL_ERROR_RETRIES = 1;
+  private readonly MAX_INTERNAL_ERROR_RETRIES = 2; // Increased retries slightly
   private lastScenarioInstruction?: string;
   private lastSpeakingRate: number = 1.0;
   private currentInputTranscription = '';
+  private apiKey: string | undefined;
 
   // Audio Accumulation Buffer
   private audioBufferChunks: Float32Array[] = [];
   private currentBufferSize = 0;
   // 4096 samples @ 16kHz = 256ms. This is a stable balance between latency and request frequency.
-  // 8192 (512ms) was too large and caused timeouts/internal errors.
   private readonly BUFFER_THRESHOLD = 4096; 
   
   // Audio Send Queue for Serialization
   private audioSendQueue: Promise<void> = Promise.resolve();
+  // Lock to prevent audio sends during tool execution
+  private isProcessingTool = false;
 
   // Keep references to prevent garbage collection
   private processor: ScriptProcessorNode | null = null;
@@ -83,7 +85,17 @@ export class LiveApiService {
 
   constructor(callbacks: LiveServiceCallbacks) {
     this.callbacks = callbacks;
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Support both Vite production env (import.meta.env) and standard process.env
+    // Also support various naming conventions (VITE_API_KEY, VITE_GEMINI_API_KEY, GEMINI_API_KEY)
+    const env = (import.meta as any).env || {};
+    const key = env.VITE_API_KEY || env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
+    
+    this.apiKey = key;
+    
+    // Initialize with provided key or a placeholder to prevent immediate crash.
+    // The actual validation happens when we try to connect.
+    this.ai = new GoogleGenAI({ apiKey: this.apiKey || 'MISSING_KEY_PLACEHOLDER' });
     
     // Auto-resume audio context when tab becomes visible (fixes mobile "sudden stop" issue)
     if (typeof document !== 'undefined') {
@@ -104,6 +116,12 @@ export class LiveApiService {
 
   async connect(scenarioInstruction?: string, speakingRate: number = 1.0) {
     if (this.session || this.isConnected) return;
+    
+    // Check for API Key before attempting anything
+    if (!this.apiKey || this.apiKey === 'MISSING_KEY_PLACEHOLDER') {
+        this.callbacks.onError("API Key not found. Please add 'VITE_API_KEY=AIza...' to your .env file.");
+        return;
+    }
 
     this.callbacks.onStateChange('CONNECTING');
     this.isConnected = true;
@@ -182,12 +200,12 @@ export class LiveApiService {
           onopen: () => {
             if (this.isConnected && !this.isDisconnecting) {
               this.callbacks.onStateChange('CONNECTED');
-              // Increased delay to 500ms to ensure server session is fully stabilized before sending PCM
+              // Increased delay to 1000ms to ensure server session is fully stabilized and audio contexts are ready
               setTimeout(() => {
                 if (this.isConnected && !this.isDisconnecting) {
                    this.startAudioInputStreaming(sessionPromise);
                 }
-              }, 500);
+              }, 1000);
             } else {
               sessionPromise.then(s => s.close());
             }
@@ -223,14 +241,15 @@ export class LiveApiService {
                 }
             }
 
-            console.error('Session error object:', e);
-            
-            // Filter common transient errors
+            // Filter common transient errors or trigger recovery
             if (errorStr.includes("Network error") || errorStr.includes("Failed to fetch") || errorStr.includes("WebSocket")) {
-                console.warn("Network instability warning:", errorStr);
-                this.isReportingError = false; // Allow future errors if this one wasn't fatal
+                console.warn("Network instability detected:", errorStr);
+                // Try to recover from network errors instead of just ignoring them, as the socket might be dead
+                this.handleInternalErrorRecovery('network error');
                 return;
             }
+
+            console.error('Session error object:', e);
 
             if (errorStr.includes("Internal error")) {
                 // Attempt a quick reconnect on transient internal errors before surfacing fatal state
@@ -275,8 +294,8 @@ export class LiveApiService {
         const errStr = String(e);
         console.debug("SafeSend failed:", errStr);
 
-        // If it's an internal error during a send, it's likely fatal for this session
-        if (errStr.includes("Internal error") && !this.hasReportedFatalError) {
+        // If it's an internal error OR network error during a send, attempt recovery
+        if ((errStr.includes("Internal error") || errStr.includes("Network error")) && !this.hasReportedFatalError) {
              this.handleInternalErrorRecovery('data transmission');
         }
     }
@@ -294,12 +313,12 @@ export class LiveApiService {
 
   private handleInternalErrorRecovery(origin: string) {
       if (this.internalErrorRetryCount >= this.MAX_INTERNAL_ERROR_RETRIES) {
-          this.handleFatalError("Session interrupted (Internal Error). Please restart.");
+          this.handleFatalError("Session interrupted (Connection unstable). Please restart.");
           return;
       }
 
       this.internalErrorRetryCount += 1;
-      console.warn(`Internal error encountered during ${origin}. Attempting quick reconnect...`);
+      console.warn(`Error encountered during ${origin}. Attempting quick reconnect (${this.internalErrorRetryCount}/${this.MAX_INTERNAL_ERROR_RETRIES})...`);
 
       // Stop current session but immediately move back to connecting state
       this.stop();
@@ -307,7 +326,7 @@ export class LiveApiService {
       this.hasReportedFatalError = false;
       this.isReportingError = false;
 
-      this.callbacks.onError("Session hiccup detected. Reconnecting...");
+      this.callbacks.onError("Connection unstable. Reconnecting...");
       this.callbacks.onStateChange('CONNECTING');
 
       const scenario = this.lastScenarioInstruction;
@@ -318,7 +337,7 @@ export class LiveApiService {
           if (!this.hasReportedFatalError && !this.isConnected && !this.isDisconnecting) {
               this.connect(scenario, speakingRate);
           }
-      }, 500);
+      }, 750);
   }
 
   private startAudioInputStreaming(sessionPromise: Promise<any>) {
@@ -333,9 +352,14 @@ export class LiveApiService {
     this.audioBufferChunks = [];
     this.currentBufferSize = 0;
     this.audioSendQueue = Promise.resolve();
+    this.isProcessingTool = false; // Reset lock
 
     this.processor.onaudioprocess = (audioProcessingEvent) => {
-      if (!this.isConnected || !this.isProcessorRunning || this.isDisconnecting) return;
+      // Logic:
+      // 1. Check basic state
+      // 2. Check if we are currently waiting for a tool response (Subtitles/Feedback).
+      //    If we are, we pause sending audio to prevent interrupting the AI or causing race conditions.
+      if (!this.isConnected || !this.isProcessorRunning || this.isDisconnecting || this.isProcessingTool) return;
 
       const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
       const downsampledData = downsampleTo16k(inputData, this.inputAudioContext!.sampleRate);
@@ -382,6 +406,7 @@ export class LiveApiService {
 
     // 2. Batched Tool Responses
     if (message.toolCall) {
+      this.isProcessingTool = true; // LOCK audio sending
       const functionResponses = [];
       for (const fc of message.toolCall.functionCalls) {
         if (fc.name === 'update_subtitles') {
@@ -401,8 +426,14 @@ export class LiveApiService {
         this.audioSendQueue = this.audioSendQueue
             .then(() => this.safeSend(async (session) => {
                 await session.sendToolResponse({ functionResponses });
+                this.isProcessingTool = false; // UNLOCK audio sending after response sent
             }, sessionPromise))
-            .catch(e => console.debug("Tool response queue error:", e));
+            .catch(e => {
+                console.debug("Tool response queue error:", e);
+                this.isProcessingTool = false; // Ensure unlock even on error
+            });
+      } else {
+          this.isProcessingTool = false;
       }
     }
 
@@ -436,6 +467,7 @@ export class LiveApiService {
       this.currentInputTranscription = '';
       this.audioBufferChunks = [];
       this.currentBufferSize = 0;
+      this.isProcessingTool = false; // Reset lock on interrupt
     }
   }
 
@@ -461,6 +493,7 @@ export class LiveApiService {
     this.isDisconnecting = true;
     this.isConnected = false;
     this.isProcessorRunning = false;
+    this.isProcessingTool = false;
 
     // Cut off the audio processor loop immediately
     if (this.processor) {

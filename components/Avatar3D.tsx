@@ -3,34 +3,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Sphere, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Add type support for R3F intrinsic elements
-// Augment both global JSX and React.JSX to ensure types are picked up correctly
-interface ThreeCustomElements {
-  group: any;
-  mesh: any;
-  cylinderGeometry: any;
-  planeGeometry: any;
-  sphereGeometry: any;
-  meshStandardMaterial: any;
-  meshBasicMaterial: any;
-  ambientLight: any;
-  directionalLight: any;
-  spotLight: any;
-  color: any;
-}
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements extends ThreeCustomElements {}
-  }
-}
-
-declare module 'react' {
-  namespace JSX {
-    interface IntrinsicElements extends ThreeCustomElements {}
-  }
-}
-
 interface Avatar3DProps {
   volume: number; // 0 to 1
 }
@@ -55,51 +27,79 @@ const blushMaterial = new THREE.MeshStandardMaterial({ color: '#FFB7B2', transpa
 
 // --- Parts ---
 
+const VISEMES = {
+    sil: { mouthOpen: 0.05, mouthWidth: 0.8, lipPucker: 0, tongueY: -0.1 },
+    aa:  { mouthOpen: 0.8,  mouthWidth: 0.9, lipPucker: 0, tongueY: 0 },
+    ee:  { mouthOpen: 0.2,  mouthWidth: 1.2, lipPucker: 0, tongueY: -0.05 },
+    ih:  { mouthOpen: 0.15, mouthWidth: 1.1, lipPucker: 0, tongueY: -0.05 },
+    oh:  { mouthOpen: 0.6,  mouthWidth: 0.6, lipPucker: 0.8, tongueY: -0.05 },
+    ou:  { mouthOpen: 0.3,  mouthWidth: 0.4, lipPucker: 1.2, tongueY: -0.05 },
+};
+
 const Eye = ({ side, mouse }: { side: 'left' | 'right', mouse: React.MutableRefObject<THREE.Vector2> }) => {
     const group = useRef<THREE.Group>(null);
     const pupil = useRef<THREE.Group>(null);
     const [blinking, setBlinking] = useState(false);
 
     useEffect(() => {
+        let timer: NodeJS.Timeout;
         const blinkLoop = () => {
             const nextBlink = Math.random() * 3000 + 2000;
-            setTimeout(() => {
+            timer = setTimeout(() => {
                 setBlinking(true);
                 setTimeout(() => {
                     setBlinking(false);
                     blinkLoop();
-                }, 150);
+                }, 120);
             }, nextBlink);
         };
         blinkLoop();
+        return () => clearTimeout(timer);
     }, []);
 
     useFrame(() => {
         if (group.current && pupil.current) {
-            // Blink animation: scale Y to 0.1
-            const targetScale = blinking ? 0.1 : 1;
+            // Blink animation: scale Y to 0.05
+            const targetScale = blinking ? 0.05 : 1;
             group.current.scale.y = THREE.MathUtils.lerp(group.current.scale.y, targetScale, 0.4);
             
             // Eye Tracking (Subtle)
-            const targetX = mouse.current.x * 0.1;
-            const targetY = mouse.current.y * 0.1;
+            const targetX = mouse.current.x * 0.12;
+            const targetY = mouse.current.y * 0.12;
             
-            pupil.current.position.x = THREE.MathUtils.lerp(pupil.current.position.x, targetX, 0.2);
-            pupil.current.position.y = THREE.MathUtils.lerp(pupil.current.position.y, targetY, 0.2);
+            pupil.current.position.x = THREE.MathUtils.lerp(pupil.current.position.x, targetX, 0.15);
+            pupil.current.position.y = THREE.MathUtils.lerp(pupil.current.position.y, targetY, 0.15);
         }
     });
 
     return (
-        <group ref={group} position={[side === 'left' ? -0.35 : 0.35, 0.1, 0.85]}>
+        <group ref={group} position={[side === 'left' ? -0.35 : 0.35, 0.15, 0.85]}>
             {/* White */}
             <Sphere args={[0.18, 32, 32]} scale={[1, 1.2, 0.6]} material={eyeWhiteMaterial} />
             {/* Pupil */}
             <group ref={pupil} position={[0, 0, 0.15]}>
-                <Sphere args={[0.08, 32, 32]} material={eyeBlackMaterial} scale={[1, 1, 0.5]} />
+                <Sphere args={[0.09, 32, 32]} material={eyeBlackMaterial} scale={[1, 1, 0.5]} />
                 {/* Glint */}
                 <Sphere args={[0.03, 16, 16]} position={[0.03, 0.03, 0.06]} material={eyeWhiteMaterial} />
             </group>
         </group>
+    );
+};
+
+const Eyebrow = ({ side }: { side: 'left' | 'right' }) => {
+    const ref = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (ref.current) {
+            const t = state.clock.elapsedTime;
+            ref.current.position.y = 0.45 + Math.sin(t * 2) * 0.01;
+            ref.current.rotation.z = (side === 'left' ? 0.1 : -0.1) + Math.sin(t * 1.5) * 0.02;
+        }
+    });
+    return (
+        <mesh ref={ref} position={[side === 'left' ? -0.35 : 0.35, 0.45, 0.88]}>
+            <boxGeometry args={[0.25, 0.04, 0.05]} />
+            <meshStandardMaterial color="#3B2F2F" />
+        </mesh>
     );
 };
 
@@ -138,10 +138,14 @@ const Hair = () => {
 };
 
 const CartoonHead = ({ volume }: { volume: number }) => {
-    const mouthRef = useRef<THREE.Group>(null);
+    const mouthGroupRef = useRef<THREE.Group>(null);
+    const mouthInnerRef = useRef<THREE.Mesh>(null);
+    const tongueRef = useRef<THREE.Mesh>(null);
     const headGroup = useRef<THREE.Group>(null);
     const { size } = useThree();
     const mouse = useRef(new THREE.Vector2());
+    const [currentViseme, setCurrentViseme] = useState(VISEMES.sil);
+    const lastVolume = useRef(0);
 
     // Update mouse position normalized (-1 to 1)
     useEffect(() => {
@@ -153,17 +157,43 @@ const CartoonHead = ({ volume }: { volume: number }) => {
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, [size]);
 
+    // Viseme logic: Cycle through visemes when volume is high
+    useEffect(() => {
+        if (volume > 0.05) {
+            const visemeKeys = Object.keys(VISEMES).filter(k => k !== 'sil');
+            const interval = setInterval(() => {
+                const randomKey = visemeKeys[Math.floor(Math.random() * visemeKeys.length)];
+                setCurrentViseme(VISEMES[randomKey as keyof typeof VISEMES]);
+            }, 120); // Faster cycle for more natural speech look
+            return () => clearInterval(interval);
+        } else {
+            setCurrentViseme(VISEMES.sil);
+        }
+    }, [volume > 0.05]);
+
     useFrame((state) => {
         const t = state.clock.elapsedTime;
 
-        // Mouth Lip Sync
-        if (mouthRef.current) {
-            // Map volume to mouth opening height
-            const targetY = 0.1 + (volume * 1.5); // 0.1 (closed) to ~1.6 (open)
-            const targetX = 1.0 - (volume * 0.3); // Narrow slightly when opening wide
+        // Mouth Lip Sync with Visemes
+        if (mouthGroupRef.current && mouthInnerRef.current && tongueRef.current) {
+            // Base openness from volume
+            const volumeBoost = Math.max(0, volume * 1.2);
             
-            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, targetY, 0.3);
-            mouthRef.current.scale.x = THREE.MathUtils.lerp(mouthRef.current.scale.x, targetX, 0.3);
+            // Interpolate towards viseme targets
+            const targetOpen = currentViseme.mouthOpen * (0.5 + volumeBoost);
+            const targetWidth = currentViseme.mouthWidth;
+            const targetPucker = currentViseme.lipPucker;
+            const targetTongueY = currentViseme.tongueY;
+
+            // Apply to mouth group (overall size/shape)
+            mouthGroupRef.current.scale.y = THREE.MathUtils.lerp(mouthGroupRef.current.scale.y, targetOpen + 0.05, 0.25);
+            mouthGroupRef.current.scale.x = THREE.MathUtils.lerp(mouthGroupRef.current.scale.x, targetWidth, 0.25);
+            
+            // Pucker effect (move mouth forward slightly)
+            mouthGroupRef.current.position.z = THREE.MathUtils.lerp(mouthGroupRef.current.position.z, 0.9 + targetPucker * 0.05, 0.2);
+            
+            // Tongue movement
+            tongueRef.current.position.y = THREE.MathUtils.lerp(tongueRef.current.position.y, targetTongueY, 0.2);
         }
 
         // Head Tracking & Idle Animation
@@ -182,9 +212,10 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             
             // Subtle "Speaking" Nod
             if (volume > 0.1) {
-                 headGroup.current.rotation.x += Math.sin(t * 20) * volume * 0.05;
+                 headGroup.current.rotation.x += Math.sin(t * 15) * volume * 0.03;
             }
         }
+        lastVolume.current = volume;
     });
 
     return (
@@ -198,9 +229,11 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             {/* Face Features */}
             <Eye side="left" mouse={mouse} />
             <Eye side="right" mouse={mouse} />
+            <Eyebrow side="left" />
+            <Eyebrow side="right" />
 
             {/* Nose (Simple Button) */}
-            <Sphere args={[0.08, 16, 16]} position={[0, -0.1, 0.95]} material={skinMaterial}>
+            <Sphere args={[0.08, 16, 16]} position={[0, -0.05, 0.95]} material={skinMaterial}>
                  <meshStandardMaterial color="#FFC4A8" roughness={0.6} /> 
             </Sphere>
 
@@ -208,17 +241,28 @@ const CartoonHead = ({ volume }: { volume: number }) => {
             <Sphere args={[0.18, 16, 16]} position={[-0.6, -0.15, 0.75]} material={blushMaterial} scale={[1, 0.6, 1]} />
             <Sphere args={[0.18, 16, 16]} position={[0.6, -0.15, 0.75]} material={blushMaterial} scale={[1, 0.6, 1]} />
 
-            {/* Mouth */}
-            <group position={[0, -0.35, 0.9]} ref={mouthRef}>
-                {/* Background (Inside mouth) */}
-                <mesh position={[0, 0, -0.02]} rotation={[0, 0, 0]}>
-                     <planeGeometry args={[0.2, 0.1]} />
-                     <meshBasicMaterial color="#3E1C1C" />
+            {/* Enhanced Mouth with Visemes */}
+            <group position={[0, -0.4, 0.9]} ref={mouthGroupRef}>
+                {/* Mouth Inner (Dark) */}
+                <mesh ref={mouthInnerRef}>
+                    <sphereGeometry args={[0.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                    <meshBasicMaterial color="#3E1C1C" side={THREE.DoubleSide} />
                 </mesh>
-                {/* Tongue (Optional detail) */}
-                <mesh position={[0, -0.05, 0.02]} scale={[0.8, 0.5, 0.5]}>
-                    <sphereGeometry args={[0.1]} />
+                
+                {/* Tongue */}
+                <mesh ref={tongueRef} position={[0, -0.1, 0.05]} scale={[0.7, 0.4, 0.5]}>
+                    <sphereGeometry args={[0.15]} />
                     <meshBasicMaterial color="#FF6B6B" />
+                </mesh>
+
+                {/* Lips (Upper & Lower) */}
+                <mesh position={[0, 0.1, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+                    <torusGeometry args={[0.18, 0.02, 8, 24, Math.PI]} />
+                    <meshStandardMaterial color="#FF8A8A" />
+                </mesh>
+                <mesh position={[0, -0.1, 0.05]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <torusGeometry args={[0.18, 0.02, 8, 24, Math.PI]} />
+                    <meshStandardMaterial color="#FF8A8A" />
                 </mesh>
             </group>
 

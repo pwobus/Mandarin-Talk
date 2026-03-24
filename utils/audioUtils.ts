@@ -13,8 +13,8 @@ export function base64ToBytes(base64: string): Uint8Array {
 export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const len = bytes.byteLength;
-  // 32768 is a safe chunk size for String.fromCharCode.apply to avoid stack overflow
-  const CHUNK_SIZE = 32768; 
+  // Reduced chunk size to 8192 to be ultra-safe for all mobile browser stack limits
+  const CHUNK_SIZE = 8192; 
   
   for (let i = 0; i < len; i += CHUNK_SIZE) {
     const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, len));
