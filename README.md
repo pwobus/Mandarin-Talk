@@ -1,14 +1,35 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+A real-time conversation partner powered by the Gemini Live API.
 
-# Run and deploy your AI Studio app
+Provides a low-pressure environment to practice tones, expand vocabulary, and master real-world scenarios.
 
-This contains everything you need to run your app locally.
+Key Features:
 
-View your app in AI Studio: https://ai.studio/apps/c545446f-9588-46db-a578-286738f96d1c
+🎙️ **Real-Time Gemini Live Conversations** 
+Natural, low-latency dialogue.
 
-## Run Locally
+🤖 **Animated 3D Avatar**
+
+✨ **Triple-Layered Subtitles** 
+Every sentence the AI speaks is transcribed into Hanzi (characters), Pinyin (pronunciation guide), and English (translation).
+
+🎯 **Instant Pronunciation Coaching** 
+Analyzes your speech and provides a "Pronunciation Score" alongside specific tips on how to improve your tones and articulation.
+
+📚 **Curated Lesson Library**
+Structured roleplay scenarios, including: The Coffee Shop: Practice ordering your favorite drink. The Taxi Ride: Navigate the streets of Beijing with confidence. Market Bargaining: Master the art of the deal. Business Meetings: Learn formal etiquette for professional success.
+
+🐢 **Adjustable Speaking Rates**
+Control the pace. Toggle between Slow, Normal, and Fast speeds to match your current listening level.
+
+📜 **Conversation History**
+ Review your chats at any time. A full transcript of your session helps you study new words and track your progress over time.
+ 
+## Screenshots
+![Mandarin talk](./sc_02.png)
+
+demo: https://ai.studio/apps/drive/1-BtnOKWM9VPE1tZKviZdP9Wz6XcahFvb
+
+Run and deploy locally:
 
 **Prerequisites:**  Node.js
 
@@ -18,3 +39,4 @@ View your app in AI Studio: https://ai.studio/apps/c545446f-9588-46db-a578-28673
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
